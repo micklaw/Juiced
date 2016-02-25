@@ -36,7 +36,7 @@ namespace Juiced
         /// <typeparam name="T"></typeparam>
         /// <param name="type"></param>
         /// <returns></returns>
-        public Mixer AddAbstract<T>(Type type) => AddAbstract<T>(new [] { type });
+        public Mixer AddAbstract<T>(Type type) => MapAbstract<T>(new [] { type });
 
         /// <summary>
         /// Adds a collection of assignable type mappings to an abstract type, of which on creation a random selection will be used
@@ -44,7 +44,7 @@ namespace Juiced
         /// <typeparam name="T"></typeparam>
         /// <param name="types"></param>
         /// <returns></returns>
-        public Mixer AddAbstract<T>(Type[] types)
+        public Mixer MapAbstract<T>(Type[] types)
         {
             var abstractType = typeof (T);
 
@@ -88,7 +88,7 @@ namespace Juiced
         /// <typeparam name="T"></typeparam>
         /// <param name="func"></param>
         /// <returns></returns>
-        public Mixer AddOnTypeFunc<T>(Func<object> func)
+        public Mixer OnType<T>(Func<object> func)
         {
             var type = typeof(T);
 

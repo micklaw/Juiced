@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 
 namespace Juiced
 {
@@ -208,6 +209,17 @@ namespace Juiced
         }
 
         /// <summary>
+        /// Run the job async to get on with other stuff while you're waiting
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="mixer"></param>
+        /// <returns></returns>
+        public static Task<T> InjectAsync<T>(Mixer mixer)
+        {
+            return Task.Run<T>(() => Inject<T>(mixer));
+        }
+
+        /// <summary>
         /// Hydrate an object given its type
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -217,7 +229,7 @@ namespace Juiced
         {
             mixer = mixer ?? Mixer.Configure;
 
-            return (T) Inject(typeof (T), mixer);
+            return (T)Inject(typeof(T), mixer);
         }
     }
 }
