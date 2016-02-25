@@ -4,21 +4,15 @@ using NUnit.Framework;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Threading;
+using Juiced.Tests.Models;
 
 namespace Juiced.Tests
 {
-    public class TestClass
-    {
-        public IList<string> Items { get; set; }
-
-        public int IntA { get; set; }
-    }
-
     [TestFixture]
     public class JuicedTests
     {
         [Test]
-        public async void Inject_Completes()
+        public async void HydrateAsync_WorksAsync()
         {
             var settings = Mixer.Configure
                                 .MapAbstract<IList<string>>(new[] { typeof(List<string>) })
@@ -26,7 +20,7 @@ namespace Juiced.Tests
 
             TestClass testClass = null;
 
-            var result = Juiced.InjectAsync<TestClass>(settings);
+            var result = Juiced.HydrateAsync<TestClass>(settings);
 
             Thread.Sleep(200);
             Trace.WriteLine("Doing some Async stuff here !");

@@ -8,6 +8,11 @@ namespace Juiced
     public class Mixer
     {
         /// <summary>
+        /// The recursion limit for nested classes
+        /// </summary>
+        public int RecursionLimit { get; private set; } = 1;
+
+        /// <summary>
         /// Delegate used to catch / suppress and handle errors
         /// </summary>
         public Func<Type, Exception, bool> OnError { get; set; }

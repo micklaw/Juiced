@@ -76,7 +76,7 @@ namespace Juiced
                 {
                     return 1.0m;
                 }
-                if (type == typeof (String))
+                if (type == typeof (string))
                 {
                     return string.Empty;
                 }
@@ -135,7 +135,7 @@ namespace Juiced
         /// <param name="type"></param>
         /// <param name="mixer"></param>
         /// <returns></returns>
-        private static object Inject(Type type, Mixer mixer)
+        private static object Hydrate(Type type, Mixer mixer)
         {
             var stack = new ConcurrentStack<Type>();
 
@@ -214,9 +214,9 @@ namespace Juiced
         /// <typeparam name="T"></typeparam>
         /// <param name="mixer"></param>
         /// <returns></returns>
-        public static Task<T> InjectAsync<T>(Mixer mixer)
+        public static Task<T> HydrateAsync<T>(Mixer mixer)
         {
-            return Task.Run<T>(() => Inject<T>(mixer));
+            return Task.Run<T>(() => Hydrate<T>(mixer));
         }
 
         /// <summary>
@@ -225,11 +225,11 @@ namespace Juiced
         /// <typeparam name="T"></typeparam>
         /// <param name="mixer"></param>
         /// <returns></returns>
-        public static T Inject<T>(Mixer mixer = null)
+        public static T Hydrate<T>(Mixer mixer = null)
         {
             mixer = mixer ?? Mixer.Configure;
 
-            return (T)Inject(typeof(T), mixer);
+            return (T)Hydrate(typeof(T), mixer);
         }
     }
 }
