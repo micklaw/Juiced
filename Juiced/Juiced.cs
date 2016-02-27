@@ -12,12 +12,30 @@ namespace Juiced
     public class Juiced
     {
         /// <summary>
+        /// Handle errors DRYly
+        /// </summary>
+        /// <param name="type"></param>
+        /// <param name="exception"></param>
+        /// <param name="handleError"></param>
+        private static void HandleError(Locations location, PropertyInfo property, Type type, Exception exception, Func<Type, Exception, bool> handleError)
+        {
+            if (handleError != null && !handleError(type, exception))
+            {
+                var message = $"Error in '{location.ToString()}' converting type '{type.Name}', property ({(property != null ? property.Name : "null")}): see inner exception for details.";
+
+                var juicedException = new JuicedException(message, exception);
+
+                throw juicedException;
+            }
+        }
+
+        /// <summary>
         /// Create an instance from a constructor
         /// </summary>
         /// <param name="type"></param>
         /// <param name="mixer"></param>
         /// <returns></returns>
-        private static object Construct(Type type, Mixer mixer)
+        private static object Construct(Type type, PropertyInfo property, Mixer mixer)
         {
             var ctors = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
@@ -35,7 +53,7 @@ namespace Juiced
                     }
                     else
                     {
-                        var paramaterList = parameters.Select(parameter => GetValue(parameter.ParameterType, mixer)).ToArray();
+                        var paramaterList = parameters.Select(parameter => GetValue(parameter.ParameterType, property, mixer)).ToArray();
 
                         return Activator.CreateInstance(type, paramaterList);
                     }
@@ -51,7 +69,7 @@ namespace Juiced
         /// <param name="type"></param>
         /// <param name="mixer"></param>
         /// <returns></returns>
-        private static object GetValue(Type type, Mixer mixer)
+        private static object GetValue(Type type, PropertyInfo property, Mixer mixer)
         {
             try
             {
@@ -100,7 +118,7 @@ namespace Juiced
                 {
                     var underlyingType = Nullable.GetUnderlyingType(type);
 
-                    return GetValue(underlyingType, mixer);
+                    return GetValue(underlyingType, property, mixer);
                 }
 
                 if (type.IsAbstract)
@@ -111,17 +129,14 @@ namespace Juiced
                         throw new Exception("Must be a non abstract type if not a list.");
                     }
 
-                    return Construct(concreteTypes.GetRandom(), mixer);
+                    return Construct(concreteTypes.GetRandom(), property, mixer);
                 }
 
-                return type.IsValueType ? Activator.CreateInstance(type) : Construct(type, mixer);
+                return type.IsValueType ? Activator.CreateInstance(type) : Construct(type, property, mixer);
             }
             catch (Exception exception)
             {
-                if (mixer.OnError == null || mixer.OnError(type, exception))
-                {
-                    throw;
-                }
+                HandleError(Locations.GetValue, property, type, exception, mixer.OnError);
             }
 
             // ML - Value type would never error, so this must be a reference type, so give it null
@@ -141,7 +156,7 @@ namespace Juiced
 
             type = type.NotNull("type");
 
-            var instance = GetValue(type, mixer);
+            var instance = GetValue(type, null, mixer);
 
             if (instance != null)
             {
@@ -169,14 +184,12 @@ namespace Juiced
                                 {
                                     current = property.GetValue(instance, null);
                                 }
-                                catch
+                                catch (Exception exception)
                                 {
-                                    // ML - Suppress the error if property throws for some reason
+                                    HandleError(Locations.Hydrate, property, type, exception, mixer.OnError);
                                 }
 
-                                var defaultValue = property.PropertyType.IsValueType
-                                    ? Activator.CreateInstance(property.PropertyType)
-                                    : null;
+                                var defaultValue = property.PropertyType.IsValueType ? Activator.CreateInstance(property.PropertyType) : null;
 
                                 if (current != null && !current.Equals(defaultValue))
                                 {
@@ -186,7 +199,7 @@ namespace Juiced
 
                             if (!isDirty)
                             {
-                                var value = GetValue(property.PropertyType, mixer);
+                                var value = GetValue(property.PropertyType, property, mixer);
 
                                 property.SetValue(instance, value, null);
                             }

@@ -18,6 +18,14 @@ namespace Juiced.Tests
     public class JuicedTests
     {
         [Test]
+        public void Inject_ValueType()
+        {
+            var result = Juiced.Inject<int>();
+
+            Assert.AreEqual(result, 1);
+        }
+
+        [Test]
         public async void Inject_Completes()
         {
             var settings = Mixer.Configure

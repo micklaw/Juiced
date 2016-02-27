@@ -73,6 +73,8 @@
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Enums\Locations.cs" />
+    <Compile Include="Exceptions\JuicedException.cs" />
     <Compile Include="Extensions\ListUtils.cs" />
     <Compile Include="Extensions\PreConditions.cs" />
     <Compile Include="Juiced.cs" />
