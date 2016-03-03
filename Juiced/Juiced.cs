@@ -16,6 +16,7 @@ namespace Juiced
         /// <summary>
         /// Handle errors DRYly
         /// </summary>
+        /// <param name="location"></param>
         /// <param name="type"></param>
         /// <param name="exception"></param>
         /// <param name="handleError"></param>
@@ -35,10 +36,13 @@ namespace Juiced
         /// Create an instance from a constructor
         /// </summary>
         /// <param name="type"></param>
+        /// <param name="identifier"></param>
         /// <param name="mixer"></param>
         /// <returns></returns>
         private static object Construct(Type type, Guid identifier, Mixer mixer)
         {
+            object instance = null;
+
             var ctors = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
             if (ctors.Any())
@@ -51,24 +55,58 @@ namespace Juiced
 
                     if (!parameters.Any())
                     {
-                        return Activator.CreateInstance(type);
+                        instance = Activator.CreateInstance(type);
                     }
                     else
                     {
                         var paramaterList = parameters.Select(parameter => GetValue(parameter.ParameterType, identifier, mixer)).ToArray();
 
-                        return Activator.CreateInstance(type, paramaterList);
+                        instance = Activator.CreateInstance(type, paramaterList);
                     }
+
+                    AndProperties(instance, identifier, mixer);
                 }
             }
 
-            return null;
+            return instance;
+        }
+
+        /// <summary>
+        /// Set the child properties of an object
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <param name="identifier"></param>
+        /// <param name="mixer"></param>
+        private static void AndProperties(object instance, Guid identifier, Mixer mixer)
+        {
+            if (instance != null)
+            {
+                var type = instance.GetType();
+
+                var properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+                if (properties.Any())
+                {
+                    foreach (var property in properties.Where(i => i.GetSetMethod(false) != null))
+                    {
+                        var recursionLimit = CountStackType(identifier, property.PropertyType);
+
+                        if (recursionLimit <= mixer.RecursionLimit)
+                        {
+                            var value = GetValue(property.PropertyType, identifier, mixer);
+
+                            property.SetValue(instance, value, null);
+                        }
+                    }
+                }
+            }
         }
 
         /// <summary>
         /// Get a default value for a type
         /// </summary>
         /// <param name="type"></param>
+        /// <param name="identifier"></param>
         /// <param name="mixer"></param>
         /// <returns></returns>
         internal static object GetValue(Type type, Guid identifier, Mixer mixer)
@@ -153,7 +191,7 @@ namespace Juiced
 
                 if (value == null)
                 {
-                    value = type.IsValueType ? Activator.CreateInstance(type) : Hydrate(type, identifier, mixer);
+                    value = type.IsValueType ? Activator.CreateInstance(type) : Construct(type, identifier, mixer);
                 }
             }
             catch (Exception exception)
@@ -174,33 +212,14 @@ namespace Juiced
         /// Hydrate an object given its type
         /// </summary>
         /// <param name="type"></param>
+        /// <param name="identifier"></param>
         /// <param name="mixer"></param>
         /// <returns></returns>
         private static object Hydrate(Type type, Guid identifier, Mixer mixer)
         {
             type = type.NotNull("type");
                  
-            var instance = Construct(type, identifier, mixer);
-
-            if (instance != null)
-            {
-                var properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-                if (properties.Any())
-                {
-                    foreach (var property in properties.Where(i => i.GetSetMethod(false) != null))
-                    {
-                        var recursionLimit = CountStackType(identifier, property.PropertyType);
-
-                        if (recursionLimit <= mixer.RecursionLimit)
-                        {
-                            var value = GetValue(property.PropertyType, identifier, mixer);
-
-                            property.SetValue(instance, value, null);
-                        }
-                    }
-                }
-            }
+            var instance = GetValue(type, identifier, mixer);
 
             return instance;
         }

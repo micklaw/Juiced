@@ -18,7 +18,7 @@ namespace Juiced.Tests
         {
             var settings = Mixer.Configure.SetRecursion(recursion);
 
-            var result = Juiced.HydrateAsync<TestClass>().Result;
+            var result = Juiced.HydrateAsync<TestClass>(settings).Result;
 
             TestClass testClass = result.Recursion;
 
@@ -39,9 +39,13 @@ namespace Juiced.Tests
         [Test]
         public void Inject_ValueType()
         {
-            var result = Juiced.HydrateAsync<int>().Result;
+            var settings = Mixer.Configure
+                                .MapAbstract<IList<string>>(new[] { typeof(List<string>) })
+                                .OnType<double>(() => 999.0d);
 
-            Assert.AreEqual(result, 1);
+            var result = Juiced.HydrateAsync<double>(settings).Result;
+
+            Assert.AreEqual(result, 999.0d);
         }
 
         [Test]
