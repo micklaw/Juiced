@@ -10,6 +10,8 @@ namespace Juiced
     /// </summary>
     public class JuicedException : Exception
     {
+        public JuicedException(string message) : base(message) { }
+
         public JuicedException(string message, Exception exception) : base(message, exception) { }
     }
 }

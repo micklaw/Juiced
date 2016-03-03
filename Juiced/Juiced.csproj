@@ -78,9 +78,11 @@
     <Compile Include="Extensions\ListUtils.cs" />
     <Compile Include="Extensions\PreConditions.cs" />
     <Compile Include="Juiced.cs" />
+    <Compile Include="Managers\RecursionManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Settings\Mixer.cs" />
   </ItemGroup>
+  <ItemGroup />
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>

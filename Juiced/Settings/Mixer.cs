@@ -10,7 +10,19 @@ namespace Juiced
         /// <summary>
         /// The recursion limit for nested classes
         /// </summary>
-        public int RecursionLimit { get; private set; } = 1;
+        public int RecursionLimit { get; private set; } = 0;
+
+        /// <summary>
+        /// Update the recursion limit so we don't overflow
+        /// </summary>
+        /// <param name="limit"></param>
+        /// <returns></returns>
+        public Mixer SetRecursion(int limit = 0)
+        {
+            RecursionLimit = limit;
+
+            return this;
+        }
 
         /// <summary>
         /// Delegate used to catch / suppress and handle errors
@@ -41,7 +53,7 @@ namespace Juiced
         /// <typeparam name="T"></typeparam>
         /// <param name="type"></param>
         /// <returns></returns>
-        public Mixer AddAbstract<T>(Type type) => MapAbstract<T>(new [] { type });
+        public Mixer AddAbstract<T>(Type type) => MapAbstract<T>(new[] { type });
 
         /// <summary>
         /// Adds a collection of assignable type mappings to an abstract type, of which on creation a random selection will be used
@@ -51,11 +63,11 @@ namespace Juiced
         /// <returns></returns>
         public Mixer MapAbstract<T>(Type[] types)
         {
-            var abstractType = typeof (T);
+            var abstractType = typeof(T);
 
             if (!abstractType.IsAbstract)
             {
-                throw new InvalidCastException($"Type {abstractType.Name} is not an abstract type.");    
+                throw new InvalidCastException($"Type {abstractType.Name} is not an abstract type.");
             }
 
             if (_abstractMapping.ContainsKey(abstractType))

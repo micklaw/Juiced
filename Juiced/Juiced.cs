@@ -7,6 +7,8 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
+using static Juiced.RecursionManager;
+
 namespace Juiced
 {
     public class Juiced
@@ -17,11 +19,11 @@ namespace Juiced
         /// <param name="type"></param>
         /// <param name="exception"></param>
         /// <param name="handleError"></param>
-        private static void HandleError(Locations location, PropertyInfo property, Type type, Exception exception, Func<Type, Exception, bool> handleError)
+        private static void HandleError(Locations location, Type type, Exception exception, Func<Type, Exception, bool> handleError)
         {
             if (handleError != null && !handleError(type, exception))
             {
-                var message = $"Error in '{location.ToString()}' converting type '{type.Name}', property ({(property != null ? property.Name : "null")}): see inner exception for details.";
+                var message = $"Error in '{location.ToString()}' converting type '{type.Name}': see inner exception for details.";
 
                 var juicedException = new JuicedException(message, exception);
 
@@ -35,7 +37,7 @@ namespace Juiced
         /// <param name="type"></param>
         /// <param name="mixer"></param>
         /// <returns></returns>
-        private static object Construct(Type type, PropertyInfo property, Mixer mixer)
+        private static object Construct(Type type, Guid identifier, Mixer mixer)
         {
             var ctors = type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
@@ -53,7 +55,7 @@ namespace Juiced
                     }
                     else
                     {
-                        var paramaterList = parameters.Select(parameter => GetValue(parameter.ParameterType, property, mixer)).ToArray();
+                        var paramaterList = parameters.Select(parameter => GetValue(parameter.ParameterType, identifier, mixer)).ToArray();
 
                         return Activator.CreateInstance(type, paramaterList);
                     }
@@ -69,59 +71,74 @@ namespace Juiced
         /// <param name="type"></param>
         /// <param name="mixer"></param>
         /// <returns></returns>
-        private static object GetValue(Type type, PropertyInfo property, Mixer mixer)
+        internal static object GetValue(Type type, Guid identifier, Mixer mixer)
         {
+            object value = null;
+
             try
             {
+                PushTo(identifier, type);
+
+                // ML - Attempt to grab from our delegate creation list
+
                 Func<object> getObject;
 
                 if (mixer.TryGetOnTypeFunc(type, out getObject))
                 {
-                    return getObject();
+                    value = getObject();
                 }
 
-                if (type.IsEnum)
+                // ML - If not create, then tryour value types and .Net types etc
+
+                if (value == null)
                 {
-                    return Enum.GetValues(type).GetValue(1);
+                    if (type.IsEnum)
+                    {
+                        value = Enum.GetValues(type).GetValue(1);
+                    }
+
+                    if (type == typeof(int))
+                    {
+                        value = 1;
+                    }
+
+                    if (type == (typeof(decimal)))
+                    {
+                        value = 1.0m;
+                    }
+
+                    if (type == typeof(string))
+                    {
+                        value = string.Empty;
+                    }
+
+                    if (type.IsArray)
+                    {
+                        value = Activator.CreateInstance(type, new object[] { 1 });
+                    }
+
+                    if (type.IsGenericType && typeof(IEnumerable).IsAssignableFrom(type))
+                    {
+                        var isGenericList = (type.GetGenericTypeDefinition() == typeof(IList<>) || type.GetGenericTypeDefinition() == typeof(List<>));
+                        var isGenericCollection = (type.GetGenericTypeDefinition() == typeof(ICollection<>) || type.GetGenericTypeDefinition() == typeof(Collection<>));
+                        var genericType = isGenericList || isGenericCollection ? type.GetGenericArguments().FirstOrDefault() : type;
+
+                        var constructedListType = (isGenericList ? typeof(List<>) : typeof(Collection<>)).MakeGenericType(genericType);
+
+                        value = Activator.CreateInstance(constructedListType);
+                    }
+
+                    if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>))
+                    {
+                        var underlyingType = Nullable.GetUnderlyingType(type);
+
+                        value = GetValue(underlyingType, identifier, mixer);
+                    }
                 }
 
-                if (type == typeof (int))
-                {
-                    return 1;
-                }
+                // ML - If its an abstract type try to create from our mappings
 
-                if (type == (typeof (decimal)))
-                {
-                    return 1.0m;
-                }
-                if (type == typeof (string))
-                {
-                    return string.Empty;
-                }
-
-                if (type.IsArray)
-                {
-                    return Activator.CreateInstance(type, new object[] {1});
-                }
-
-                if (type.IsGenericType && typeof (IEnumerable).IsAssignableFrom(type))
-                {
-                    var isGenericList = (type.GetGenericTypeDefinition() == typeof (IList<>) || type.GetGenericTypeDefinition() == typeof (List<>));
-                    var isGenericCollection = (type.GetGenericTypeDefinition() == typeof (ICollection<>) || type.GetGenericTypeDefinition() == typeof (Collection<>));
-                    var genericType = isGenericList || isGenericCollection ? type.GetGenericArguments().FirstOrDefault() : type;
-
-                    var constructedListType = (isGenericList ? typeof (List<>) : typeof (Collection<>)).MakeGenericType(genericType);
-                    return Activator.CreateInstance(constructedListType);
-                }
-
-                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof (Nullable<>))
-                {
-                    var underlyingType = Nullable.GetUnderlyingType(type);
-
-                    return GetValue(underlyingType, property, mixer);
-                }
-
-                if (type.IsAbstract)
+                if (value == null && type.IsAbstract)
                 {
                     Type[] concreteTypes;
                     if (!mixer.TryGetAbstract(type, out concreteTypes))
@@ -129,19 +146,28 @@ namespace Juiced
                         throw new Exception("Must be a non abstract type if not a list.");
                     }
 
-                    return Construct(concreteTypes.GetRandom(), property, mixer);
+                    value = Construct(concreteTypes.GetRandom(), identifier, mixer);
                 }
 
-                return type.IsValueType ? Activator.CreateInstance(type) : Construct(type, property, mixer);
+                // ML - Or just try
+
+                if (value == null)
+                {
+                    value = type.IsValueType ? Activator.CreateInstance(type) : Hydrate(type, identifier, mixer);
+                }
             }
             catch (Exception exception)
             {
-                HandleError(Locations.GetValue, property, type, exception, mixer.OnError);
+                HandleError(Locations.GetValue, type, exception, mixer.OnError);
+            }
+            finally
+            {
+                PopTo(identifier);
             }
 
             // ML - Value type would never error, so this must be a reference type, so give it null
 
-            return null;
+            return value;
         }
 
         /// <summary>
@@ -150,75 +176,33 @@ namespace Juiced
         /// <param name="type"></param>
         /// <param name="mixer"></param>
         /// <returns></returns>
-        private static object Hydrate(Type type, Mixer mixer)
+        private static object Hydrate(Type type, Guid identifier, Mixer mixer)
         {
-            var stack = new ConcurrentStack<Type>();
-
             type = type.NotNull("type");
-
-            var instance = GetValue(type, null, mixer);
+                 
+            var instance = Construct(type, identifier, mixer);
 
             if (instance != null)
             {
-                stack.Push(type);
-
                 var properties = type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
                 if (properties.Any())
                 {
                     foreach (var property in properties.Where(i => i.GetSetMethod(false) != null))
                     {
-                        Type peeked;
+                        var recursionLimit = CountStackType(identifier, property.PropertyType);
 
-                        stack.TryPeek(out peeked);
-
-                        if (property.PropertyType != peeked)
+                        if (recursionLimit <= mixer.RecursionLimit)
                         {
-                            var isDirty = false;
+                            var value = GetValue(property.PropertyType, identifier, mixer);
 
-                            if (property.GetGetMethod(false) != null)
-                            {
-                                object current = null;
-
-                                try
-                                {
-                                    current = property.GetValue(instance, null);
-                                }
-                                catch (Exception exception)
-                                {
-                                    HandleError(Locations.Hydrate, property, type, exception, mixer.OnError);
-                                }
-
-                                var defaultValue = property.PropertyType.IsValueType ? Activator.CreateInstance(property.PropertyType) : null;
-
-                                if (current != null && !current.Equals(defaultValue))
-                                {
-                                    isDirty = true;
-                                }
-                            }
-
-                            if (!isDirty)
-                            {
-                                var value = GetValue(property.PropertyType, property, mixer);
-
-                                property.SetValue(instance, value, null);
-                            }
-                            else
-                            {
-                                // TODO: ML - Handle dirty properties
-                            }
+                            property.SetValue(instance, value, null);
                         }
                     }
                 }
-
-                Type popped;
-
-                stack.TryPop(out popped);
-
-                return instance;
             }
 
-            return null;
+            return instance;
         }
 
         /// <summary>
@@ -227,22 +211,13 @@ namespace Juiced
         /// <typeparam name="T"></typeparam>
         /// <param name="mixer"></param>
         /// <returns></returns>
-        public static Task<T> HydrateAsync<T>(Mixer mixer)
+        public static Task<T> HydrateAsync<T>(Mixer mixer = null)
         {
-            return Task.Run<T>(() => Hydrate<T>(mixer));
-        }
+            var identifier = Guid.NewGuid();
 
-        /// <summary>
-        /// Hydrate an object given its type
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="mixer"></param>
-        /// <returns></returns>
-        public static T Hydrate<T>(Mixer mixer = null)
-        {
             mixer = mixer ?? Mixer.Configure;
 
-            return (T)Hydrate(typeof(T), mixer);
+            return Task.Run<T>(() => (T)Hydrate(typeof(T), identifier, mixer));
         }
     }
 }

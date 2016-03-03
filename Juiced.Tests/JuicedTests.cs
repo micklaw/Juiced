@@ -11,10 +11,35 @@ namespace Juiced.Tests
     [TestFixture]
     public class JuicedTests
     {
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        public void Inject_RecursionLimit(int recursion)
+        {
+            var settings = Mixer.Configure.SetRecursion(recursion);
+
+            var result = Juiced.HydrateAsync<TestClass>().Result;
+
+            TestClass testClass = result.Recursion;
+
+            for (var i = 0; i <= recursion; i++)
+            {
+                if (i== recursion)
+                {
+                    Assert.IsNull(testClass);
+                    continue;
+                }
+
+                Assert.IsNotNull(testClass);
+
+                testClass = testClass.Recursion;
+            }
+        }
+
         [Test]
         public void Inject_ValueType()
         {
-            var result = Juiced.Hydrate<int>();
+            var result = Juiced.HydrateAsync<int>().Result;
 
             Assert.AreEqual(result, 1);
         }
