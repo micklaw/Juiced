@@ -74,11 +74,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Enums\Locations.cs" />
+    <Compile Include="Managers\ErrorManager.cs" />
     <Compile Include="Exceptions\JuicedException.cs" />
     <Compile Include="Extensions\ListUtils.cs" />
     <Compile Include="Extensions\PreConditions.cs" />
     <Compile Include="Juiced.cs" />
     <Compile Include="Managers\RecursionManager.cs" />
+    <Compile Include="Managers\ValueManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Settings\Mixer.cs" />
   </ItemGroup>

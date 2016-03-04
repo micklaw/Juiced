@@ -8,6 +8,23 @@ namespace Juiced
     public class Mixer
     {
         /// <summary>
+        /// 
+        /// </summary>
+        internal Mixer()
+        {
+            OnType<int>(() => 1);
+            OnType<decimal>(() => 1.1m);
+            OnType<double>(() => 1.1111);
+            OnType<byte>(() => new byte());
+            OnType<short>(() => 1);
+            OnType<uint>(() => 1);
+            OnType<long>(() => 1);
+            OnType<ulong>(() => 1);
+            OnType<bool>(() => false);
+            OnType<string>(() => Guid.NewGuid().ToString().ToLower());
+        }
+
+        /// <summary>
         /// The recursion limit for nested classes
         /// </summary>
         public int RecursionLimit { get; private set; } = 0;
@@ -63,6 +80,8 @@ namespace Juiced
         /// <returns></returns>
         public Mixer MapAbstract<T>(Type[] types)
         {
+            types = types.NotNull("types");
+
             var abstractType = typeof(T);
 
             if (!abstractType.IsAbstract)
@@ -70,12 +89,7 @@ namespace Juiced
                 throw new InvalidCastException($"Type {abstractType.Name} is not an abstract type.");
             }
 
-            if (_abstractMapping.ContainsKey(abstractType))
-            {
-                throw new InvalidOperationException($"Key of type {abstractType.Namespace} already exists in the configuration.");
-            }
-
-            if (types == null || types.Length == 0)
+            if (types.Length == 0)
             {
                 throw new InvalidOperationException($"Your not adding any types to map to your abstract type {abstractType.Name}.");
             }
@@ -83,6 +97,14 @@ namespace Juiced
             foreach (var type in types.Where(type => !abstractType.IsAssignableFrom(type)))
             {
                 throw new InvalidCastException($"Type {type.Name} is not assignable to type {abstractType.Name}.");
+            }
+
+            if (_abstractMapping.ContainsKey(abstractType))
+            {
+                Type[] oldTypes;
+
+                _abstractMapping.TryGetValue(abstractType, out oldTypes);
+                _abstractMapping.TryUpdate(abstractType, types, oldTypes);
             }
 
             _abstractMapping.TryAdd(abstractType, types);
@@ -107,16 +129,16 @@ namespace Juiced
         /// <returns></returns>
         public Mixer OnType<T>(Func<object> func)
         {
+            func = func.NotNull("func");
+
             var type = typeof(T);
 
-            if (_abstractMapping.ContainsKey(type))
+            if (_onTypeFunc.ContainsKey(type))
             {
-                throw new InvalidOperationException($"Key of type {type.Namespace} already exists in the configuration.");
-            }
+                Func<object> oldFunc;
 
-            if (func == null)
-            {
-                throw new InvalidOperationException($"Your not adding any func to map to your type {type.Name}.");
+                _onTypeFunc.TryGetValue(type, out oldFunc);
+                _onTypeFunc.TryUpdate(type, func, oldFunc);
             }
 
             _onTypeFunc.TryAdd(type, func);

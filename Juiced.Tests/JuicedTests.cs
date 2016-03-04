@@ -39,9 +39,7 @@ namespace Juiced.Tests
         [Test]
         public void Inject_ValueType()
         {
-            var settings = Mixer.Configure
-                                .MapAbstract<IList<string>>(new[] { typeof(List<string>) })
-                                .OnType<double>(() => 999.0d);
+            var settings = Mixer.Configure.OnType<double>(() => 999.0d);
 
             var result = Juiced.HydrateAsync<double>(settings).Result;
 
@@ -51,9 +49,7 @@ namespace Juiced.Tests
         [Test]
         public async void HydrateAsync_WorksAsync()
         {
-            var settings = Mixer.Configure
-                                .MapAbstract<IList<string>>(new[] { typeof(List<string>) })
-                                .OnType<int>(() => 999);
+            var settings = Mixer.Configure.OnType<int>(() => 999);
 
             TestClass testClass = null;
 

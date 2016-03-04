@@ -9,7 +9,7 @@ namespace Juiced
     /// <summary>
     /// Stack used to manage recursion in each iteration
     /// </summary>
-    public class RecursionManager
+    internal class RecursionManager
     {
         private static ConcurrentDictionary<Guid, ConcurrentStack<Type>> _stacks = new ConcurrentDictionary<Guid, ConcurrentStack<Type>>();
 
