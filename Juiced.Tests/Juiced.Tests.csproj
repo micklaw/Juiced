@@ -57,6 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="JuicedTests.cs" />
+    <Compile Include="Models\Abstract\ITestClass.cs" />
     <Compile Include="Models\Structs\ChildStruct.cs" />
     <Compile Include="Models\TestClassChild.cs" />
     <Compile Include="Models\TestClass.cs" />

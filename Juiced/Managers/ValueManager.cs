@@ -8,6 +8,7 @@ using static Juiced.RecursionManager;
 using static Juiced.ErrorManager;
 using System.Collections;
 using System.Collections.ObjectModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace Juiced
 {
@@ -16,6 +17,16 @@ namespace Juiced
     /// </summary>
     internal class ValueManager
     {
+        /// <summary>
+        /// Lazy loading of the random as a singleton
+        /// </summary>
+        private static readonly Lazy<Random> _random = new Lazy<Random>(() => new Random());
+
+        /// <summary>
+        /// The instance of the random
+        /// </summary>
+        private static Random RandomInstance => _random.Value;
+         
         /// <summary>
         /// Get a default value for a type
         /// </summary>
@@ -46,12 +57,14 @@ namespace Juiced
                 {
                     if (type.IsEnum)
                     {
-                        value = Enum.GetValues(type).GetValue(1);
+                        var enums = Enum.GetValues(type);
+
+                        value = enums.GetValue(RandomInstance.Next(0, enums.Length - 1));
                     }
 
                     if (type.IsArray)
                     {
-                        value = Activator.CreateInstance(type, new object[] { 1 });
+                        value = Activator.CreateInstance(type, 1);
                     }
 
                     if (type.IsGenericType && typeof(IEnumerable).IsAssignableFrom(type))
@@ -73,25 +86,28 @@ namespace Juiced
                     }
                 }
 
-                // ML - If its an abstract type try to create from our mappings
-
-                if (value == null && type.IsAbstract)
-                {
-                    Type[] concreteTypes;
-                    if (!mixer.TryGetAbstract(type, out concreteTypes))
-                    {
-                        throw new Exception("Must be a non abstract type if not a list.");
-                    }
-
-                    value = Construct(concreteTypes.GetRandom(), identifier, mixer);
-                }
-
-                // ML - Or just try
-
                 if (value == null)
                 {
-                    value = type.IsValueType ? Activator.CreateInstance(type) : Construct(type, identifier, mixer);
+                    // ML - If its an abstract type try to create from our mappings
+
+                    if (type.IsAbstract)
+                    {
+                        Type[] concreteTypes;
+                        if (mixer.TryGetAbstract(type, out concreteTypes))
+                        {
+                            value = Construct(concreteTypes.GetRandom(), identifier, mixer);
+                        }
+                    }
+                    else
+                    {
+                        // ML - Else last change construct or fire a value type off
+
+                        value = Construct(type, identifier, mixer) ?? Activator.CreateInstance(type);
+                    }
                 }
+
+
+                // ML - Or just try and construct
             }
             catch (Exception exception)
             {

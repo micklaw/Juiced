@@ -41,7 +41,15 @@ namespace Juiced
 
             mixer = mixer ?? Mixer.Configure;
 
-            return Task.Run<T>(() => (T)Hydrate(typeof(T), identifier, mixer));
+            return Task.Run(() =>
+            {
+                var item = Hydrate(typeof (T), identifier, mixer);
+
+                if (item == null)
+                    return default(T);
+
+                return (T)item;
+            });
         }
     }
 }

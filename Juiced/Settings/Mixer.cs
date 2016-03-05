@@ -13,13 +13,14 @@ namespace Juiced
         internal Mixer()
         {
             OnType<int>(() => 1);
-            OnType<decimal>(() => 1.1m);
-            OnType<double>(() => 1.1111);
+            OnType<decimal>(() => 1.1M);
+            OnType<double>(() => 1.1D);
             OnType<byte>(() => new byte());
-            OnType<short>(() => 1);
-            OnType<uint>(() => 1);
-            OnType<long>(() => 1);
-            OnType<ulong>(() => 1);
+            OnType<short>(() => (short)1);
+            OnType<uint>(() => 1U);
+            OnType<long>(() => 1L);
+            OnType<float>(() => 1.1F);
+            OnType<ulong>(() => 1UL);
             OnType<bool>(() => false);
             OnType<string>(() => Guid.NewGuid().ToString().ToLower());
         }
@@ -70,7 +71,7 @@ namespace Juiced
         /// <typeparam name="T"></typeparam>
         /// <param name="type"></param>
         /// <returns></returns>
-        public Mixer AddAbstract<T>(Type type) => MapAbstract<T>(new[] { type });
+        public Mixer MapAbstract<T>(Type type) => MapAbstract<T>(new[] { type });
 
         /// <summary>
         /// Adds a collection of assignable type mappings to an abstract type, of which on creation a random selection will be used
