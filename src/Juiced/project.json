@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0-*",
+  "description": "Juiced",
+  "authors": [ "MichaelcLaw" ],
+  "tags": [ "POCO,Hydration,Fixture,Setup,Unit,Testing" ],
+  "projectUrl": "",
+  "licenseUrl": "",
+  "dependencies": {
+  },
+  "frameworks": {
+    "dnxcore50": { 
+        "dependencies": {
+            "System.Runtime": "4.0.20",
+            "System.Collections": "4.0.10",
+            "System.Collections.Concurrent": "4.0.10",
+            "System.Linq": "4.0.0",
+            "System.Reflection": "4.1.0-beta-23516",
+            "System.Reflection.TypeExtensions": "4.0.0",
+            "System.ObjectModel": "4.0.11-beta-23409"
+        }
+    }
+  }
+}
