@@ -17,7 +17,7 @@ namespace Juiced.Tests
 
             var result = Juiced.HydrateAsync<TestClass>(settings).Result;
 
-            TestClass testClass = result.Recursion;
+            var testClass = result.Recursion;
 
             for (var i = 0; i <= recursion; i++)
             {
@@ -37,9 +37,9 @@ namespace Juiced.Tests
         public void HydrateAsync_UnhandlesExceptionsThrows()
         {
             var settings = Mixer.Configure.OnType<double>(() =>
-                {
-                    throw new InvalidCastException("This is an invalid cast exception");
-                });
+            {
+                throw new InvalidCastException("This is an invalid cast exception");
+            });
 
             var exception = Assert.Throws<AggregateException>(() => { var i = Juiced.HydrateAsync<double>(settings).Result; });
 
