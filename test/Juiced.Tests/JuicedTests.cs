@@ -34,7 +34,7 @@ namespace Juiced.Tests
         }
 
         [Fact]
-        public void HydrateAsync_UnhandlesExceptionsThrows()
+        public void HydrateAsync_UnhandledExceptionsThrows()
         {
             var settings = Mixer.Configure.OnType<double>(() =>
             {
@@ -43,8 +43,45 @@ namespace Juiced.Tests
 
             var exception = Assert.Throws<AggregateException>(() => { var i = Juiced.HydrateAsync<double>(settings).Result; });
 
-            Assert.Equal(exception.InnerExceptions[0].GetType(), typeof(InvalidCastException));
+            Assert.Equal(typeof(AggregateException), exception.GetType());
+            Assert.Equal(typeof(JuicedException), exception.InnerExceptions[0].GetType());
+            Assert.Equal(typeof(InvalidCastException), exception.InnerExceptions[0].InnerException.GetType());
         }
+
+        [Fact]
+        public async void HydrateAsync_HandledExceptionsBasedOnType()
+        {
+            var intCount = 0;
+            var count = 0;
+
+            var settings = Mixer.Configure.OnType<double>(() =>
+            {
+                throw new InvalidCastException("This is an invalid cast exception");
+
+            }).OnType<int>(() =>
+            {
+                throw new InvalidCastException("This is an invalid cast exception");
+            })
+            .SetRecursion(0);
+
+            settings.HandleTypeError<int>((type, handledException) =>
+            {
+                intCount++;
+                return true;
+            });
+
+            settings.OnError = (type, handledException) =>
+            {
+                count++;
+                return true;
+            };
+
+            var exception = await Juiced.HydrateAsync<TestClassB>(settings);
+
+            Assert.Equal(1, intCount);
+            Assert.Equal(1, count);
+        }
+
 
         [Theory]
         [InlineData(false)]
@@ -106,6 +143,36 @@ namespace Juiced.Tests
 
             Assert.NotNull(testClass);
             Assert.NotNull(testClass.RecursionAsInterface);
+        }
+
+        [Fact]
+        public async void Hydrate_Works()
+        {
+            var settings = Mixer.Configure.OnType<int>(() => 999)
+                .MapAbstract<ITestClass>(new[] { typeof(TestClass) });
+
+            TestClass testClass = await Juiced.HydrateAsync<TestClass>(settings);
+
+            Assert.NotNull(testClass);
+            Assert.Equal(testClass.BoolValue, false);
+            Assert.Equal(testClass.ByteValue, new byte());
+            Assert.NotNull(testClass.ChildStruct);
+            Assert.Equal(testClass.ChildStruct.IntB, 999);
+            Assert.Equal(testClass.DecimalValue, 1.1M);
+            Assert.Equal(testClass.DoubleValue, 1.1D);
+            Assert.Equal(testClass.UIntValue, 1U);
+            Assert.Equal(testClass.IntA, 999);
+            Assert.NotNull(testClass.Items);
+            Assert.Equal(testClass.LongValue, 1L);
+            Assert.Null(testClass.Recursion);
+            Assert.NotNull(testClass.RecursionAsInterface);
+            Assert.Equal(testClass.ShortValue, (short)1);
+            Assert.Equal(testClass.ULongValue, 1UL);
+            Assert.Equal(testClass.FloatValue, 1.1F);
+            Assert.Equal(testClass.CharValue, new char());
+            Assert.NotNull(testClass.StringArrayValue);
+            Assert.NotNull(testClass.StringValue);
+            Assert.NotEmpty(testClass.StringValue);
         }
 
         [Fact]

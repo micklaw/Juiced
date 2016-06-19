@@ -8,7 +8,7 @@ namespace Juiced
     public class Mixer
     {
         /// <summary>
-        /// 
+        /// Internal constructor for registering default types
         /// </summary>
         internal Mixer()
         {
@@ -46,6 +46,24 @@ namespace Juiced
         /// Delegate used to catch / suppress and handle errors
         /// </summary>
         public Func<Type, Exception, bool> OnError { get; set; }
+
+        /// <summary>
+        /// Handle an error based on type
+        /// </summary>
+        internal ConcurrentDictionary<Type, Func<Type, Exception, bool>> OnTypeError { get; } = new ConcurrentDictionary<Type, Func<Type, Exception, bool>>();
+
+        /// <summary>
+        /// Adds a new method for error handling on a specific type
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="method"></param>
+        /// <returns></returns>
+        public Mixer HandleTypeError<T>(Func<Type, Exception, bool> method)
+        {
+            OnTypeError.TryAdd(typeof (T), method.NotNull("method"));
+
+            return this;
+        }
 
         /// <summary>
         /// Creates a mapping between abstract types and their concrete implementation to use. By default uses smaller constructor

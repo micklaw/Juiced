@@ -110,7 +110,7 @@ namespace Juiced
             }
             catch (Exception exception)
             {
-                HandleError(Locations.GetValue, type, exception, mixer.OnError);
+                HandleError(Locations.GetValue, type, exception, mixer);
             }
             finally
             {

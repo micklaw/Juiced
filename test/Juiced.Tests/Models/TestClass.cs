@@ -4,6 +4,13 @@ using Juiced.Tests.Models.Structs;
 
 namespace Juiced.Tests.Models
 {
+    public class TestClassB
+    {
+        public int IntA { get; set; }
+
+        public double DoubleValue { get; set; }
+    }
+
     public class TestClass : ITestClass
     {
         public IList<string> Items { get; set; }
