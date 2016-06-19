@@ -1,4 +1,7 @@
 # Juiced
+
+[![Build status](https://ci.appveyor.com/api/projects/status/pwa5h7ffenh58oq7?svg=true)](https://ci.appveyor.com/project/MichaelLaw/juiced)
+
 Populating test fixtures is a pain. **@autofixture** does this really well, but I have found on occassions it can be a little slow and in some cases overlay complicated. This is a lightweight way to Juice up your POCOs with dummy data for Unit tests or what not.
 
 ## Shut up and show me how already
